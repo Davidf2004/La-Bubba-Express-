@@ -13,13 +13,30 @@ import {
   User,
 } from "lucide-react";
 import { auth, db } from "../firebaseConfig";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useAuth } from "../hooks/useAuth";
 
 const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
   const { user, logout } = useAuth();
+  const [userData, setUserData] = useState(null);
   const [orders, setOrders] = useState([]);
   const [rewards, setRewards] = useState(0);
+
+  // Cargar datos del usuario desde Firestore
+  useEffect(() => {
+    const fetchUserData = async () => {
+      if (!user) return;
+
+      const ref = doc(db, "users", user.uid);
+      const snap = await getDoc(ref);
+
+      if (snap.exists()) {
+        setUserData(snap.data());
+      }
+    };
+
+    fetchUserData();
+  }, [user]);
 
   // Obtener historial de pedidos
   useEffect(() => {
@@ -27,30 +44,25 @@ const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
       if (!user) return;
       try {
         const q = query(collection(db, "orders"), where("userId", "==", user.uid));
-        const querySnapshot = await getDocs(q);
-        const orderList = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setOrders(orderList);
+        const qs = await getDocs(q);
+        const list = qs.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+        setOrders(list);
       } catch (error) {
         console.error("Error al obtener pedidos:", error);
       }
     };
+
     fetchOrders();
   }, [user]);
 
   useEffect(() => {
     if (orders.length > 0) {
-      const totalRewards = orders.reduce(
-        (sum, order) => sum + Math.floor(order.total / 10),
-        0
-      );
-      setRewards(totalRewards);
+      const total = orders.reduce((sum, o) => sum + Math.floor(o.total / 10), 0);
+      setRewards(total);
     }
   }, [orders]);
 
-  const totalSpent = orders.reduce((sum, order) => sum + order.total, 0);
+  const totalSpent = orders.reduce((sum, o) => sum + o.total, 0);
   const avgOrderValue = orders.length > 0 ? Math.round(totalSpent / orders.length) : 0;
 
   const handleLogout = async () => {
@@ -71,6 +83,7 @@ const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
             >
               <ChevronRight size={24} className="transform rotate-180" />
             </button>
+
             <button
               onClick={handleLogout}
               className="flex items-center gap-2 px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-full transition"
@@ -85,19 +98,26 @@ const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
             <div className="w-24 h-24 bg-white rounded-full flex items-center justify-center text-5xl">
               👤
             </div>
+
             <div>
-              <h1 className="text-3xl font-bold mb-1">{user?.displayName || "Usuario"}</h1>
+              <h1 className="text-3xl font-bold mb-1">
+                {userData?.name || "Usuario"}
+              </h1>
+
               <div className="flex items-center gap-2 text-emerald-100 mb-1">
                 <Mail size={16} />
-                <span>{user?.email}</span>
+                <span>{userData?.email || "—"}</span>
               </div>
+
               <div className="flex items-center gap-2 text-emerald-100">
                 <Phone size={16} />
-                <span>{user?.phoneNumber || "Sin teléfono"}</span>
+                <span>{userData?.phone || "Sin teléfono"}</span>
               </div>
+
               <p className="text-sm text-emerald-100 mt-2">
-                Miembro desde {user?.metadata?.creationTime
-                  ? new Date(user.metadata.creationTime).toLocaleDateString("es-MX")
+                Miembro desde{" "}
+                {userData?.createdAt?.toDate
+                  ? userData.createdAt.toDate().toLocaleDateString("es-MX")
                   : "—"}
               </p>
             </div>
@@ -172,7 +192,9 @@ const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
           {orders.length === 0 ? (
             <div className="text-center py-12">
               <Package size={64} className="mx-auto text-gray-300 mb-4" />
-              <h3 className="text-xl font-bold text-gray-800 mb-2">No tienes órdenes aún</h3>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">
+                No tienes órdenes aún
+              </h3>
               <p className="text-gray-600 mb-6">
                 Realiza tu primera orden y aparecerá aquí
               </p>
@@ -217,6 +239,7 @@ const ProfileScreen = ({ setCurrentView, showNotificationMessage }) => {
                         ID Cliente: {order.userId}
                       </div>
                     </div>
+
                     <div className="text-right">
                       <div className="text-2xl font-bold text-gray-900">
                         ${order.total}

@@ -1,4 +1,3 @@
-// src/components/LoginScreen.jsx
 import React, { useState } from "react";
 import { auth, db } from "../firebaseConfig";
 import {
@@ -10,10 +9,10 @@ import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
-    email: "",
-    password: "",
     name: "",
+    email: "",
     phone: "",
+    password: "",
   });
   const [errors, setErrors] = useState({});
 
@@ -22,16 +21,15 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
     if (!formData.email) newErrors.email = "El correo es requerido";
     else if (!/\S+@\S+\.\S+/.test(formData.email))
       newErrors.email = "Correo inválido";
-
     if (!formData.password) newErrors.password = "La contraseña es requerida";
     else if (formData.password.length < 6)
       newErrors.password = "Mínimo 6 caracteres";
-
     if (!isLogin) {
       if (!formData.name) newErrors.name = "El nombre es requerido";
       if (!formData.phone) newErrors.phone = "El teléfono es requerido";
+      else if (!/^\d{10}$/.test(formData.phone))
+        newErrors.phone = "Debe tener 10 dígitos";
     }
-
     return newErrors;
   };
 
@@ -45,7 +43,11 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
+        await signInWithEmailAndPassword(
+          auth,
+          formData.email,
+          formData.password
+        );
         showNotificationMessage("¡Bienvenido de nuevo!");
       } else {
         const userCredential = await createUserWithEmailAndPassword(
@@ -65,8 +67,14 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
       }
       setCurrentView("menu");
     } catch (error) {
-      console.error(error);
-      showNotificationMessage("Error: " + error.message);
+      const messages = {
+        "auth/email-already-in-use": "Este correo ya está registrado.",
+        "auth/invalid-email": "Correo inválido.",
+        "auth/weak-password": "La contraseña es muy débil.",
+        "auth/user-not-found": "No existe una cuenta con ese correo.",
+        "auth/wrong-password": "La contraseña es incorrecta.",
+      };
+      showNotificationMessage(messages[error.code] || error.message);
     }
   };
 
@@ -89,9 +97,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 setErrors({});
               }}
               className={`flex-1 py-3 rounded-full font-semibold transition ${
-                isLogin
-                  ? "bg-emerald-700 text-white"
-                  : "text-gray-600 hover:bg-gray-200"
+                isLogin ? "bg-emerald-700 text-white" : "text-gray-600"
               }`}
             >
               Iniciar Sesión
@@ -102,9 +108,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 setErrors({});
               }}
               className={`flex-1 py-3 rounded-full font-semibold transition ${
-                !isLogin
-                  ? "bg-emerald-700 text-white"
-                  : "text-gray-600 hover:bg-gray-200"
+                !isLogin ? "bg-emerald-700 text-white" : "text-gray-600"
               }`}
             >
               Registrarse
@@ -128,6 +132,35 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                   } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
                   placeholder="Juan Pérez García"
                 />
+                {errors.name && (
+                  <p className="text-red-500 text-xs">{errors.name}</p>
+                )}
+              </div>
+            )}
+
+            {!isLogin && (
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Teléfono*
+                </label>
+                <input
+                  type="tel"
+                  maxLength={10}
+                  value={formData.phone}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      phone: e.target.value.replace(/\D/g, ""),
+                    })
+                  }
+                  className={`w-full px-4 py-3 border ${
+                    errors.phone ? "border-red-500" : "border-gray-200"
+                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                  placeholder="4771234567"
+                />
+                {errors.phone && (
+                  <p className="text-red-500 text-xs">{errors.phone}</p>
+                )}
               </div>
             )}
 
@@ -146,6 +179,9 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
                 placeholder="tu@email.com"
               />
+              {errors.email && (
+                <p className="text-red-500 text-xs">{errors.email}</p>
+              )}
             </div>
 
             <div>
@@ -163,6 +199,9 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
                 placeholder="••••••••"
               />
+              {errors.password && (
+                <p className="text-red-500 text-xs">{errors.password}</p>
+              )}
             </div>
 
             <button
