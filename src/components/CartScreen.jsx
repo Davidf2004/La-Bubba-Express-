@@ -1,18 +1,27 @@
-// src/components/CartScreen.jsx
 import React from "react";
-import { ChevronRight, Trash2, Plus, Minus, MapPin, Clock, Gift, Bell } from "lucide-react";
+import {
+  ChevronRight,
+  Trash2,
+  Plus,
+  Minus,
+  MapPin,
+  Clock,
+  Gift,
+} from "lucide-react";
+
 import { db } from "../firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth } from "../firebaseConfig";
+import { useAuth } from "../hooks/useAuth";
 
 const CartScreen = ({
   cart,
   setCart,
   setCurrentView,
   showNotificationMessage,
-  userData,
   setOrder,
 }) => {
+  const { user } = useAuth();
+
   const updateQuantity = (id, delta) => {
     setCart(
       cart.map((item) =>
@@ -33,13 +42,12 @@ const CartScreen = ({
     (sum, item) => sum + item.price * item.quantity,
     0
   );
+
   const tax = Math.round(subtotal * 0.16);
   const total = subtotal + tax;
 
   const placeOrder = async () => {
-    const currentUser = auth.currentUser;
-
-    if (!currentUser) {
+    if (!user) {
       showNotificationMessage("Inicia sesión para hacer tu pedido");
       setCurrentView("login");
       return;
@@ -52,8 +60,8 @@ const CartScreen = ({
 
     try {
       const orderData = {
-        userId: currentUser.uid,
-        userEmail: currentUser.email,
+        userId: user.uid,
+        userEmail: user.email,
         items: cart.map((item) => ({
           id: item.id,
           name: item.name,
@@ -65,13 +73,16 @@ const CartScreen = ({
         tax,
         total,
         status: "confirmado",
-        pickupLocation: "Universidad De La Salle Bajío - Cafetería Principal",
+        pickupLocation:
+          "Universidad De La Salle Bajío - Cafetería Principal",
         createdAt: serverTimestamp(),
       };
 
-      const docRef = await addDoc(collection(db, "orders"), orderData);
-      setOrder({ id: docRef.id, ...orderData });
+      const ref = await addDoc(collection(db, "orders"), orderData);
+
+      setOrder({ id: ref.id, ...orderData });
       setCart([]);
+
       showNotificationMessage("¡Orden confirmada!");
       setCurrentView("order");
     } catch (error) {
@@ -94,6 +105,7 @@ const CartScreen = ({
                 className="transform rotate-180 text-gray-700"
               />
             </button>
+
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Tu Carrito</h1>
               <p className="text-sm text-gray-600">
@@ -114,6 +126,7 @@ const CartScreen = ({
             <p className="text-gray-600 mb-8 text-lg">
               Explora nuestro menú y encuentra tu bebida perfecta
             </p>
+
             <button
               onClick={() => setCurrentView("menu")}
               className="bg-emerald-700 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-emerald-800 transition shadow-lg"
@@ -128,6 +141,7 @@ const CartScreen = ({
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
                   Tus Bebidas ({cart.reduce((s, i) => s + i.quantity, 0)} items)
                 </h2>
+
                 <div className="space-y-6">
                   {cart.map((item) => (
                     <div
@@ -148,6 +162,7 @@ const CartScreen = ({
                               ${item.price} c/u
                             </p>
                           </div>
+
                           <button
                             onClick={() => removeFromCart(item.id)}
                             className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition"
@@ -164,9 +179,11 @@ const CartScreen = ({
                             >
                               <Minus size={18} />
                             </button>
+
                             <span className="font-bold text-lg w-10 text-center">
                               {item.quantity}
                             </span>
+
                             <button
                               onClick={() => updateQuantity(item.id, 1)}
                               className="bg-white p-2 rounded-full hover:bg-gray-50 shadow-sm transition"
@@ -192,16 +209,19 @@ const CartScreen = ({
                   <div className="bg-emerald-700 p-4 rounded-2xl">
                     <MapPin className="text-white" size={28} />
                   </div>
+
                   <div className="flex-1">
                     <h3 className="font-bold text-xl text-gray-900 mb-2">
                       Punto de Recolección
                     </h3>
+
                     <p className="text-gray-700 font-medium mb-1">
                       Universidad De La Salle Bajío
                     </p>
                     <p className="text-sm text-gray-600 mb-3">
                       Campus León • Cafetería Principal
                     </p>
+
                     <div className="flex items-center gap-2 text-emerald-700">
                       <Clock size={18} />
                       <span className="text-sm font-semibold">
@@ -225,10 +245,12 @@ const CartScreen = ({
                     <span>Subtotal</span>
                     <span className="font-semibold">${subtotal}</span>
                   </div>
+
                   <div className="flex justify-between text-gray-600">
                     <span>IVA (16%)</span>
                     <span className="font-semibold">${tax}</span>
                   </div>
+
                   <div className="border-t-2 pt-4">
                     <div className="flex justify-between items-center">
                       <span className="text-xl font-bold text-gray-900">

@@ -1,72 +1,106 @@
-// src/hooks/useAuth.js
 import { useState, useEffect } from "react";
-import { 
+import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
-  updateProfile
+  updateProfile,
 } from "firebase/auth";
 import { auth, db } from "../firebaseConfig";
-import { doc, setDoc } from "firebase/firestore";
+import {
+  doc,
+  setDoc,
+  getDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 export function useAuth() {
   const [user, setUser] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mantener sesión activa
+  const loadProfile = async (firebaseUser) => {
+    if (!firebaseUser) {
+      setProfile(null);
+      return;
+    }
+
+    const ref = doc(db, "users", firebaseUser.uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists()) {
+      setProfile({ id: firebaseUser.uid, ...snap.data() });
+    } else {
+      const data = {
+        name: firebaseUser.displayName || "",
+        email: firebaseUser.email,
+        phone: "",
+        rewards: 0,
+        role: firebaseUser.email === "bubba@cafeteria.mx" ? "admin" : "user",
+        createdAt: serverTimestamp(),
+      };
+      await setDoc(ref, data);
+      setProfile(data);
+    }
+  };
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      setUser(currentUser || null);
+    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
+      setUser(firebaseUser || null);
+      if (firebaseUser) await loadProfile(firebaseUser);
+      else setProfile(null);
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => unsub();
   }, []);
 
-  // Crear usuario nuevo
-  const register = async (fullName, email, password) => {
-    try {
-      const res = await createUserWithEmailAndPassword(auth, email, password);
+  const register = async (name, phone, email, password) => {
+    const res = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(res.user, { displayName: name });
 
-      // Guardar nombre en Firebase Auth
-      await updateProfile(res.user, {
-        displayName: fullName,
-      });
+    const data = {
+      name,
+      phone,
+      email,
+      rewards: 0,
+      role: email === "bubba@cafeteria.mx" ? "admin" : "user",
+      createdAt: serverTimestamp(),
+    };
 
-      // Registrar usuario en Firestore
-      await setDoc(doc(db, "users", res.user.uid), {
-        fullName,
-        email,
-        createdAt: new Date(),
-      });
+    await setDoc(doc(db, "users", res.user.uid), data);
 
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: error.message };
-    }
+    setUser(res.user);
+    setProfile(data);
+    return { ok: true };
   };
 
-  // Iniciar sesión
   const login = async (email, password) => {
-    try {
-      await signInWithEmailAndPassword(auth, email, password);
-      return { ok: true };
-    } catch (error) {
-      return { ok: false, error: error.message };
-    }
+    await signInWithEmailAndPassword(auth, email, password);
+    return { ok: true };
   };
 
-  // Cerrar sesión
+  const updateUserProfile = async (newData) => {
+    if (!user) return;
+    const ref = doc(db, "users", user.uid);
+    await updateDoc(ref, newData);
+    setProfile((prev) => ({ ...prev, ...newData }));
+  };
+
   const logout = async () => {
     await signOut(auth);
+    setUser(null);
+    setProfile(null);
   };
 
   return {
     user,
+    profile,
     loading,
     register,
     login,
     logout,
+    updateUserProfile,
   };
 }

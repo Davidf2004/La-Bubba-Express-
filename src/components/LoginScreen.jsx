@@ -1,12 +1,8 @@
 import React, { useState } from "react";
-import { auth, db } from "../firebaseConfig";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-} from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useAuth } from "../hooks/useAuth";
 
 const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
+  const { login, register } = useAuth();
   const [isLogin, setIsLogin] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
@@ -19,11 +15,11 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
   const validateForm = () => {
     const newErrors = {};
     if (!formData.email) newErrors.email = "El correo es requerido";
-    else if (!/\S+@\S+\.\S+/.test(formData.email))
-      newErrors.email = "Correo inválido";
+    else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Correo inválido";
+
     if (!formData.password) newErrors.password = "La contraseña es requerida";
-    else if (formData.password.length < 6)
-      newErrors.password = "Mínimo 6 caracteres";
+    else if (formData.password.length < 6) newErrors.password = "Mínimo 6 caracteres";
+
     if (!isLogin) {
       if (!formData.name) newErrors.name = "El nombre es requerido";
       if (!formData.phone) newErrors.phone = "El teléfono es requerido";
@@ -43,38 +39,41 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
 
     try {
       if (isLogin) {
-        await signInWithEmailAndPassword(
-          auth,
-          formData.email,
-          formData.password
-        );
+        const res = await login(formData.email, formData.password);
+        if (!res.ok) throw new Error(res.error);
         showNotificationMessage("¡Bienvenido de nuevo!");
       } else {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
+        const res = await register(
+          formData.name,
+          formData.phone,
           formData.email,
           formData.password
         );
-        const user = userCredential.user;
-        await setDoc(doc(db, "users", user.uid), {
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          rewards: 0,
-          createdAt: serverTimestamp(),
-        });
+        if (!res.ok) throw new Error(res.error);
         showNotificationMessage("¡Cuenta creada exitosamente!");
       }
+
       setCurrentView("menu");
     } catch (error) {
-      const messages = {
-        "auth/email-already-in-use": "Este correo ya está registrado.",
-        "auth/invalid-email": "Correo inválido.",
-        "auth/weak-password": "La contraseña es muy débil.",
-        "auth/user-not-found": "No existe una cuenta con ese correo.",
-        "auth/wrong-password": "La contraseña es incorrecta.",
-      };
-      showNotificationMessage(messages[error.code] || error.message);
+      const firebaseCode = String(error.message).replace("Firebase:", "").trim();
+
+      const loginErrors = [
+        "auth/invalid-credential",
+        "auth/invalid-email",
+        "auth/user-not-found",
+        "auth/wrong-password",
+      ];
+
+      if (loginErrors.includes(firebaseCode)) {
+        showNotificationMessage("Credenciales incorrectas.");
+      } else {
+        const otherMessages = {
+          "auth/email-already-in-use": "Este correo ya está registrado.",
+          "auth/weak-password": "La contraseña es muy débil.",
+        };
+
+        showNotificationMessage(otherMessages[firebaseCode] || firebaseCode);
+      }
     }
   };
 
@@ -83,9 +82,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
       <div className="max-w-md w-full">
         <div className="text-center mb-8">
           <div className="text-7xl mb-4">🧋</div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            La Bubba Express
-          </h1>
+          <h1 className="text-4xl font-bold text-gray-900 mb-2">La Bubba Express</h1>
           <p className="text-gray-600">Sistema de Pedidos en Línea</p>
         </div>
 
@@ -102,6 +99,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
             >
               Iniciar Sesión
             </button>
+
             <button
               onClick={() => {
                 setIsLogin(false);
@@ -117,51 +115,51 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {!isLogin && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Nombre Completo*
-                </label>
-                <input
-                  type="text"
-                  value={formData.name}
-                  onChange={(e) =>
-                    setFormData({ ...formData, name: e.target.value })
-                  }
-                  className={`w-full px-4 py-3 border ${
-                    errors.name ? "border-red-500" : "border-gray-200"
-                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="Juan Pérez García"
-                />
-                {errors.name && (
-                  <p className="text-red-500 text-xs">{errors.name}</p>
-                )}
-              </div>
-            )}
+              <>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Nombre Completo*
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) =>
+                      setFormData({ ...formData, name: e.target.value })
+                    }
+                    className={`w-full px-4 py-3 border ${
+                      errors.name ? "border-red-500" : "border-gray-200"
+                    } rounded-xl`}
+                    placeholder="Juan Pérez García"
+                  />
+                  {errors.name && (
+                    <p className="text-red-500 text-xs">{errors.name}</p>
+                  )}
+                </div>
 
-            {!isLogin && (
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Teléfono*
-                </label>
-                <input
-                  type="tel"
-                  maxLength={10}
-                  value={formData.phone}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      phone: e.target.value.replace(/\D/g, ""),
-                    })
-                  }
-                  className={`w-full px-4 py-3 border ${
-                    errors.phone ? "border-red-500" : "border-gray-200"
-                  } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                  placeholder="4771234567"
-                />
-                {errors.phone && (
-                  <p className="text-red-500 text-xs">{errors.phone}</p>
-                )}
-              </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Teléfono*
+                  </label>
+                  <input
+                    type="tel"
+                    maxLength={10}
+                    value={formData.phone}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        phone: e.target.value.replace(/\D/g, ""),
+                      })
+                    }
+                    className={`w-full px-4 py-3 border ${
+                      errors.phone ? "border-red-500" : "border-gray-200"
+                    } rounded-xl`}
+                    placeholder="4771234567"
+                  />
+                  {errors.phone && (
+                    <p className="text-red-500 text-xs">{errors.phone}</p>
+                  )}
+                </div>
+              </>
             )}
 
             <div>
@@ -176,7 +174,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 }
                 className={`w-full px-4 py-3 border ${
                   errors.email ? "border-red-500" : "border-gray-200"
-                } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                } rounded-xl`}
                 placeholder="tu@email.com"
               />
               {errors.email && (
@@ -196,7 +194,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 }
                 className={`w-full px-4 py-3 border ${
                   errors.password ? "border-red-500" : "border-gray-200"
-                } rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500`}
+                } rounded-xl`}
                 placeholder="••••••••"
               />
               {errors.password && (
