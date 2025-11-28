@@ -26,12 +26,20 @@ const MenuScreen = ({
   const [selectedCategory, setSelectedCategory] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState(["Todo", "Popular"]);
 
   useEffect(() => {
     const loadMenu = async () => {
       const snap = await getDocs(collection(db, "menu"));
       const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setMenuItems(list);
+
+      const uniqueCats = [
+        "Todo",
+        "Popular",
+        ...Array.from(new Set(list.map((i) => i.category || "Otros"))),
+      ];
+      setCategories(uniqueCats);
     };
     loadMenu();
   }, []);
@@ -65,19 +73,20 @@ const MenuScreen = ({
       selectedCategory === "Todo" ||
       (selectedCategory === "Popular" && item.popular) ||
       item.category === selectedCategory;
+
     const matchesSearch = item.name
       .toLowerCase()
       .includes(searchQuery.toLowerCase());
+
     return matchesCategory && matchesSearch;
   });
 
-  const isURL = (str) =>
-    /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)$/i.test(str);
-
   return (
     <div className="min-h-screen bg-white">
+
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
+
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setCurrentView("intro")}
@@ -135,7 +144,24 @@ const MenuScreen = ({
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-6 py-12">
+      <div className="max-w-7xl mx-auto px-6 pt-8">
+
+        <div className="flex overflow-x-auto gap-3 pb-4">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setSelectedCategory(cat)}
+              className={`px-5 py-2 rounded-full whitespace-nowrap font-semibold transition ${
+                selectedCategory === cat
+                  ? "bg-emerald-700 text-white shadow-md"
+                  : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+
         <h2 className="text-4xl font-bold text-gray-900 mb-2">
           {selectedCategory === "Todo" ? "Nuestro Menú" : selectedCategory}
         </h2>
@@ -149,7 +175,7 @@ const MenuScreen = ({
             No hay productos para mostrar. Si eres administrador, crea productos desde el Panel Staff.
           </p>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
             {filteredItems.map((item) => (
               <div
                 key={item.id}
@@ -157,7 +183,7 @@ const MenuScreen = ({
               >
                 <div className="relative h-64 bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 rounded-t-3xl flex items-center justify-center overflow-hidden">
 
-                  {isURL(item.image) ? (
+                  {String(item.image).startsWith("http") ? (
                     <img
                       src={item.image}
                       alt={item.name}
@@ -195,13 +221,13 @@ const MenuScreen = ({
                     {item.name}
                   </h3>
 
-                  <p className="text-gray-600 text-sm mb-5">
-                    {item.description}
-                  </p>
+                  <p className="text-gray-600 text-sm mb-5">{item.description}</p>
 
                   <div className="flex items-center justify-between">
-                    <div className="text-3xl font-bold text-gray-900">
-                      ${item.price}
+                    <div>
+                      <div className="text-3xl font-bold text-gray-900">
+                        ${item.price}
+                      </div>
                     </div>
 
                     <button
