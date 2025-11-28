@@ -167,7 +167,7 @@ const MenuScreen = ({
         </h2>
 
         <p className="text-gray-600 mb-8">
-          {filteredItems.length} bebidas disponibles
+          {filteredItems.length} Productos disponibles
         </p>
 
         {filteredItems.length === 0 ? (
