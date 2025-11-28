@@ -219,13 +219,13 @@ const CartScreen = ({
                       Universidad De La Salle Bajío
                     </p>
                     <p className="text-sm text-gray-600 mb-3">
-                      Campus León • Cafetería Principal
+                      Campus Campestre • Cafetería El rincon de la bubba (Frente a Santander)
                     </p>
 
                     <div className="flex items-center gap-2 text-emerald-700">
                       <Clock size={18} />
                       <span className="text-sm font-semibold">
-                        Listo en 15-20 minutos
+                        Listo en 10-15 minutos
                       </span>
                     </div>
                   </div>

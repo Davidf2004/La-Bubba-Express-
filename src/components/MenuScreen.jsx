@@ -84,17 +84,28 @@ const MenuScreen = ({
   return (
     <div className="min-h-screen bg-white">
 
+      {/* HEADER */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
 
           <div className="flex items-center justify-between mb-4">
+            {/* LOGO + INSTAGRAM */}
             <button
-              onClick={() => setCurrentView("intro")}
-              className="text-3xl hover:scale-110 transition"
+              onClick={() =>
+                window.open("https://instagram.com/elrincondelabubba", "_blank")
+              }
+              className="flex items-center gap-2 group hover:opacity-90 transition"
             >
-              🧋
+              <span className="text-3xl">🧋</span>
+
+              <img
+                src="/logo.png"
+                alt="El Rincón de la Bubba"
+                className="h-10 md:h-12 object-contain animate-heartbeat group-hover:scale-110 transition-transform"
+              />
             </button>
 
+            {/* BOTONES DERECHA */}
             <div className="flex items-center gap-3">
               {isAdmin && (
                 <button
@@ -128,6 +139,7 @@ const MenuScreen = ({
             </div>
           </div>
 
+          {/* SEARCH BAR */}
           <div className="relative">
             <Search
               className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -144,8 +156,8 @@ const MenuScreen = ({
         </div>
       </div>
 
+      {/* CATEGORÍAS */}
       <div className="max-w-7xl mx-auto px-6 pt-8">
-
         <div className="flex overflow-x-auto gap-3 pb-4">
           {categories.map((cat) => (
             <button
@@ -162,14 +174,29 @@ const MenuScreen = ({
           ))}
         </div>
 
+        {/* TÍTULO */}
         <h2 className="text-4xl font-bold text-gray-900 mb-2">
           {selectedCategory === "Todo" ? "Nuestro Menú" : selectedCategory}
         </h2>
 
+        {/* CONTADOR PRODUCTOS */}
         <p className="text-gray-600 mb-8">
-          {filteredItems.length} Productos disponibles
+          {filteredItems.length === 0 ? (
+            selectedCategory === "Todo"
+              ? "No hay productos disponibles"
+              : `No hay productos en ${selectedCategory}`
+          ) : filteredItems.length === 1 ? (
+            selectedCategory === "Todo"
+              ? "1 Producto disponible"
+              : `1 Producto disponible en ${selectedCategory}`
+          ) : selectedCategory === "Todo" ? (
+            `${filteredItems.length} Productos disponibles`
+          ) : (
+            `${filteredItems.length} Productos disponibles en ${selectedCategory}`
+          )}
         </p>
 
+        {/* PRODUCTOS */}
         {filteredItems.length === 0 ? (
           <p className="text-gray-500">
             No hay productos para mostrar. Si eres administrador, crea productos desde el Panel Staff.
@@ -224,10 +251,8 @@ const MenuScreen = ({
                   <p className="text-gray-600 text-sm mb-5">{item.description}</p>
 
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-900">
-                        ${item.price}
-                      </div>
+                    <div className="text-3xl font-bold text-gray-900">
+                      ${item.price}
                     </div>
 
                     <button
