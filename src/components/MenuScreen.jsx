@@ -71,12 +71,13 @@ const MenuScreen = ({
     return matchesCategory && matchesSearch;
   });
 
+  const isURL = (str) =>
+    /^https?:\/\/.+\.(jpg|jpeg|png|webp|gif|svg)$/i.test(str);
+
   return (
     <div className="min-h-screen bg-white">
-      {/* HEADER */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
-
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={() => setCurrentView("intro")}
@@ -86,7 +87,6 @@ const MenuScreen = ({
             </button>
 
             <div className="flex items-center gap-3">
-              
               {isAdmin && (
                 <button
                   onClick={() => setCurrentView("admin")}
@@ -119,7 +119,6 @@ const MenuScreen = ({
             </div>
           </div>
 
-          {/* SEARCH BAR */}
           <div className="relative">
             <Search
               className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -136,7 +135,6 @@ const MenuScreen = ({
         </div>
       </div>
 
-      {/* MENU LIST */}
       <div className="max-w-7xl mx-auto px-6 py-12">
         <h2 className="text-4xl font-bold text-gray-900 mb-2">
           {selectedCategory === "Todo" ? "Nuestro Menú" : selectedCategory}
@@ -157,8 +155,17 @@ const MenuScreen = ({
                 key={item.id}
                 className="bg-white rounded-3xl border border-gray-200 hover:border-emerald-300 hover:shadow-2xl transition-all duration-300"
               >
-                <div className="relative h-64 bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 rounded-t-3xl flex items-center justify-center">
-                  <div className="text-9xl">{item.image}</div>
+                <div className="relative h-64 bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 rounded-t-3xl flex items-center justify-center overflow-hidden">
+
+                  {isURL(item.image) ? (
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-full h-full object-cover rounded-t-3xl"
+                    />
+                  ) : (
+                    <div className="text-9xl">{item.image}</div>
+                  )}
 
                   {item.popular && (
                     <div className="absolute top-4 left-4 bg-amber-500 text-white px-4 py-2 rounded-full text-sm font-bold shadow-lg">
@@ -188,13 +195,13 @@ const MenuScreen = ({
                     {item.name}
                   </h3>
 
-                  <p className="text-gray-600 text-sm mb-5">{item.description}</p>
+                  <p className="text-gray-600 text-sm mb-5">
+                    {item.description}
+                  </p>
 
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-3xl font-bold text-gray-900">
-                        ${item.price}
-                      </div>
+                    <div className="text-3xl font-bold text-gray-900">
+                      ${item.price}
                     </div>
 
                     <button
