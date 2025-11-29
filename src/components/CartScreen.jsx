@@ -74,7 +74,7 @@ const CartScreen = ({
         total,
         status: "confirmado",
         pickupLocation:
-          "Universidad De La Salle Bajío - Cafetería Principal",
+          "Universidad De La Salle Bajío - Cafetería El Rincon de la Bubba (Frente a Santander)",
         createdAt: serverTimestamp(),
       };
 
@@ -225,7 +225,7 @@ const CartScreen = ({
                     <div className="flex items-center gap-2 text-emerald-700">
                       <Clock size={18} />
                       <span className="text-sm font-semibold">
-                        Listo en 10-15 minutos
+                        Listo en 15-20 minutos
                       </span>
                     </div>
                   </div>

@@ -2,13 +2,15 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../hooks/useAuth";
+
 import LoginScreen from "./LoginScreen";
 import MenuScreen from "./MenuScreen";
 import CartScreen from "./CartScreen";
 import ProfileScreen from "./ProfileScreen";
 import OrderScreen from "./OrderScreen";
 import AdminPanel from "./AdminPanel";
-import OrderDetailsScreen from "./OrderDetailsScreen";   // ⬅️ NUEVO
+import OrderDetailsScreen from "./OrderDetailsScreen";
+
 import { CheckCircle2 } from "lucide-react";
 
 const BubbaExpressApp = () => {
@@ -17,7 +19,7 @@ const BubbaExpressApp = () => {
   const [currentView, setCurrentView] = useState("login");
   const [cart, setCart] = useState([]);
   const [order, setOrder] = useState(null);
-  const [selectedOrder, setSelectedOrder] = useState(null);  // ⬅️ NUEVO
+  const [selectedOrder, setSelectedOrder] = useState(null);
   const [favorites, setFavorites] = useState([]);
   const [notification, setNotification] = useState(null);
 
@@ -26,16 +28,28 @@ const BubbaExpressApp = () => {
     user &&
     (user.email === "bubba@cafeteria.mx" || profile?.role === "admin");
 
-  // Redirecciones automáticas
+  // 🔥 FIX: Control REAL de invitado
   useEffect(() => {
     if (loading) return;
 
-    if (isLoggedIn && currentView === "login") {
-      setCurrentView("menu");
+    const isGuest = localStorage.getItem("guest") === "true";
+
+    // ❌ Si NO hay usuario y NO ha presionado invitado → forzar login
+    if (!isLoggedIn && !isGuest) {
+      if (currentView !== "login") {
+        setCurrentView("login");
+      }
+      return;
     }
-    if (!isLoggedIn && currentView !== "login") {
-      setCurrentView("login");
+
+    // ✔ Si inicia sesión → ir al menú
+    if (isLoggedIn) {
+      if (currentView === "login") setCurrentView("menu");
+      return;
     }
+
+    // ✔ Si es invitado → NO forzar a menú
+    // El botón manual se encargará de enviarlo
   }, [loading, isLoggedIn, currentView]);
 
   const showNotificationMessage = (message) => {
@@ -70,8 +84,9 @@ const BubbaExpressApp = () => {
         )}
       </AnimatePresence>
 
-      {/* Router interno */}
       <AnimatePresence mode="wait">
+
+        {/* LOGIN */}
         {currentView === "login" && (
           <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <LoginScreen
@@ -81,6 +96,7 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
+        {/* MENÚ */}
         {currentView === "menu" && (
           <motion.div key="menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <MenuScreen
@@ -94,6 +110,7 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
+        {/* CARRITO */}
         {currentView === "cart" && (
           <motion.div key="cart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <CartScreen
@@ -107,6 +124,7 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
+        {/* ORDEN FINAL */}
         {currentView === "order" && (
           <motion.div key="order" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <OrderScreen
@@ -117,26 +135,25 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
+        {/* PERFIL */}
         {currentView === "profile" && (
           <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <ProfileScreen
               setCurrentView={setCurrentView}
               showNotificationMessage={showNotificationMessage}
-              setSelectedOrder={setSelectedOrder}       // ⬅️ NUEVO
+              setSelectedOrder={setSelectedOrder}
             />
           </motion.div>
         )}
 
-        {/* NUEVA VISTA — DETALLES DEL PEDIDO */}
+        {/* DETALLES DE ORDEN */}
         {currentView === "orderDetails" && (
           <motion.div key="orderDetails" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <OrderDetailsScreen
-              order={selectedOrder}
-              setCurrentView={setCurrentView}
-            />
+            <OrderDetailsScreen order={selectedOrder} setCurrentView={setCurrentView} />
           </motion.div>
         )}
 
+        {/* PANEL ADMIN */}
         {currentView === "admin" && isAdmin && (
           <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <AdminPanel
@@ -145,6 +162,7 @@ const BubbaExpressApp = () => {
             />
           </motion.div>
         )}
+
       </AnimatePresence>
     </div>
   );

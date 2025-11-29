@@ -14,6 +14,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
 
   const validateForm = () => {
     const newErrors = {};
+
     if (!formData.email) newErrors.email = "El correo es requerido";
     else if (!/\S+@\S+\.\S+/.test(formData.email)) newErrors.email = "Correo inválido";
 
@@ -26,11 +27,13 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
       else if (!/^\d{10}$/.test(formData.phone))
         newErrors.phone = "Debe tener 10 dígitos";
     }
+
     return newErrors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -38,6 +41,9 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
     }
 
     try {
+      // 🔥 Si se inicia sesión normal, se quita el modo invitado
+      localStorage.removeItem("guest");
+
       if (isLogin) {
         const res = await login(formData.email, formData.password);
         if (!res.ok) throw new Error(res.error);
@@ -55,7 +61,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
 
       setCurrentView("menu");
     } catch (error) {
-      const firebaseCode = String(error.message).replace("Firebase:", "").trim();
+      const firebaseCode = error.message.replace("Firebase:", "").trim();
 
       const loginErrors = [
         "auth/invalid-credential",
@@ -77,9 +83,17 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
     }
   };
 
+  // 🔥 BOTÓN MODO INVITADO
+  const handleGuest = () => {
+    localStorage.setItem("guest", "true");
+    showNotificationMessage("Entraste como invitado");
+    setCurrentView("menu");
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-amber-50 flex items-center justify-center p-6">
       <div className="max-w-md w-full">
+
         <div className="text-center mb-8">
           <div className="text-7xl mb-4">🧋</div>
           <h1 className="text-4xl font-bold text-gray-900 mb-2">La Bubba Express</h1>
@@ -131,9 +145,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                     } rounded-xl`}
                     placeholder="Juan Pérez García"
                   />
-                  {errors.name && (
-                    <p className="text-red-500 text-xs">{errors.name}</p>
-                  )}
+                  {errors.name && <p className="text-red-500 text-xs">{errors.name}</p>}
                 </div>
 
                 <div>
@@ -155,9 +167,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                     } rounded-xl`}
                     placeholder="4771234567"
                   />
-                  {errors.phone && (
-                    <p className="text-red-500 text-xs">{errors.phone}</p>
-                  )}
+                  {errors.phone && <p className="text-red-500 text-xs">{errors.phone}</p>}
                 </div>
               </>
             )}
@@ -177,9 +187,7 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
                 } rounded-xl`}
                 placeholder="tu@email.com"
               />
-              {errors.email && (
-                <p className="text-red-500 text-xs">{errors.email}</p>
-              )}
+              {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
             </div>
 
             <div>
@@ -210,12 +218,14 @@ const LoginScreen = ({ setCurrentView, showNotificationMessage }) => {
             </button>
           </form>
 
+          {/* 🟢 BOTÓN INVITADO */}
           <button
-            onClick={() => setCurrentView("intro")}
+            onClick={handleGuest}
             className="w-full mt-4 text-gray-600 hover:text-gray-800 font-medium"
           >
             Continuar como invitado
           </button>
+
         </div>
       </div>
     </div>

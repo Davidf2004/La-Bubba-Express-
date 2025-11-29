@@ -23,6 +23,9 @@ const MenuScreen = ({
   const { user, profile } = useAuth();
   const isAdmin = profile?.role === "admin";
 
+  // 🟢 Detectar usuario invitado
+  const isGuest = localStorage.getItem("guest") === "true";
+
   const [selectedCategory, setSelectedCategory] = useState("Todo");
   const [searchQuery, setSearchQuery] = useState("");
   const [menuItems, setMenuItems] = useState([]);
@@ -45,6 +48,11 @@ const MenuScreen = ({
   }, []);
 
   const addToCart = (item) => {
+    if (isGuest) {
+      showNotificationMessage("Inicia sesión para realizar pedidos");
+      return;
+    }
+
     const existing = cart.find((c) => c.id === item.id);
     if (existing) {
       setCart(
@@ -59,6 +67,11 @@ const MenuScreen = ({
   };
 
   const toggleFavorite = (id) => {
+    if (isGuest) {
+      showNotificationMessage("Inicia sesión para agregar favoritos");
+      return;
+    }
+
     if (favorites.includes(id)) {
       setFavorites(favorites.filter((f) => f !== id));
       showNotificationMessage("Eliminado de favoritos");
@@ -84,11 +97,19 @@ const MenuScreen = ({
   return (
     <div className="min-h-screen bg-white">
 
+      {/* 🔶 AVISO PARA INVITADOS */}
+      {isGuest && (
+        <div className="bg-amber-100 text-amber-800 text-center py-3 text-sm font-semibold">
+          Estás navegando como invitado — inicia sesión para realizar pedidos.
+        </div>
+      )}
+
       {/* HEADER */}
       <div className="bg-white border-b sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4">
 
           <div className="flex items-center justify-between mb-4">
+            
             {/* LOGO + INSTAGRAM */}
             <button
               onClick={() =>
@@ -107,7 +128,8 @@ const MenuScreen = ({
 
             {/* BOTONES DERECHA */}
             <div className="flex items-center gap-3">
-              {isAdmin && (
+
+              {isAdmin && !isGuest && (
                 <button
                   onClick={() => setCurrentView("admin")}
                   className="p-3 rounded-full bg-emerald-700 text-white hover:bg-emerald-800 transition"
@@ -116,7 +138,7 @@ const MenuScreen = ({
                 </button>
               )}
 
-              {user && (
+              {user && !isGuest && (
                 <button
                   onClick={() => setCurrentView("profile")}
                   className="p-3 rounded-full hover:bg-gray-100 transition"
@@ -126,11 +148,22 @@ const MenuScreen = ({
               )}
 
               <button
-                onClick={() => setCurrentView("cart")}
-                className="relative bg-emerald-700 text-white p-3 rounded-full hover:bg-emerald-800 transition shadow-md"
+                onClick={() => {
+                  if (isGuest) {
+                    showNotificationMessage("Inicia sesión para ver tu carrito");
+                    return;
+                  }
+                  setCurrentView("cart");
+                }}
+                className={`relative p-3 rounded-full shadow-md ${
+                  isGuest
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-emerald-700 text-white hover:bg-emerald-800"
+                }`}
               >
                 <ShoppingCart size={22} />
-                {cart.length > 0 && (
+
+                {!isGuest && cart.length > 0 && (
                   <span className="absolute -top-1 -right-1 bg-amber-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
                     {cart.reduce((sum, item) => sum + item.quantity, 0)}
                   </span>
@@ -203,6 +236,7 @@ const MenuScreen = ({
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-12">
+
             {filteredItems.map((item) => (
               <div
                 key={item.id}
@@ -226,7 +260,7 @@ const MenuScreen = ({
                     </div>
                   )}
 
-                  {user && (
+                  {!isGuest && (
                     <button
                       onClick={() => toggleFavorite(item.id)}
                       className="absolute top-4 right-4 bg-white p-3 rounded-full shadow-lg hover:scale-110 transition"
@@ -248,7 +282,9 @@ const MenuScreen = ({
                     {item.name}
                   </h3>
 
-                  <p className="text-gray-600 text-sm mb-5">{item.description}</p>
+                  <p className="text-gray-600 text-sm mb-5">
+                    {item.description}
+                  </p>
 
                   <div className="flex items-center justify-between">
                     <div className="text-3xl font-bold text-gray-900">
@@ -257,20 +293,25 @@ const MenuScreen = ({
 
                     <button
                       onClick={() => addToCart(item)}
-                      disabled={item.stock === 0}
+                      disabled={item.stock === 0 || isGuest}
                       className={`px-6 py-3 rounded-full font-semibold flex items-center gap-2 shadow-lg ${
-                        item.stock === 0
+                        item.stock === 0 || isGuest
                           ? "bg-gray-300 text-gray-500 cursor-not-allowed"
                           : "bg-emerald-700 text-white hover:bg-emerald-800"
                       }`}
                     >
                       <Plus size={20} />
-                      {item.stock === 0 ? "Agotado" : "Agregar"}
+                      {item.stock === 0
+                        ? "Agotado"
+                        : isGuest
+                        ? "Restringido"
+                        : "Agregar"}
                     </button>
                   </div>
                 </div>
               </div>
             ))}
+
           </div>
         )}
       </div>
