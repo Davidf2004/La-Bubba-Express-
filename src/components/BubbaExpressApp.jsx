@@ -10,6 +10,7 @@ import ProfileScreen from "./ProfileScreen";
 import OrderScreen from "./OrderScreen";
 import AdminPanel from "./AdminPanel";
 import OrderDetailsScreen from "./OrderDetailsScreen";
+import EditProfileScreen from "./EditProfileScreen"; // ← NUEVO
 
 import { CheckCircle2 } from "lucide-react";
 
@@ -28,28 +29,22 @@ const BubbaExpressApp = () => {
     user &&
     (user.email === "bubba@cafeteria.mx" || profile?.role === "admin");
 
-  // 🔥 FIX: Control REAL de invitado
+  // 🔥 Control de invitado
   useEffect(() => {
     if (loading) return;
 
     const isGuest = localStorage.getItem("guest") === "true";
 
-    // ❌ Si NO hay usuario y NO ha presionado invitado → forzar login
     if (!isLoggedIn && !isGuest) {
-      if (currentView !== "login") {
-        setCurrentView("login");
-      }
+      if (currentView !== "login") setCurrentView("login");
       return;
     }
 
-    // ✔ Si inicia sesión → ir al menú
-    if (isLoggedIn) {
-      if (currentView === "login") setCurrentView("menu");
+    if (isLoggedIn && currentView === "login") {
+      setCurrentView("menu");
       return;
     }
 
-    // ✔ Si es invitado → NO forzar a menú
-    // El botón manual se encargará de enviarlo
   }, [loading, isLoggedIn, currentView]);
 
   const showNotificationMessage = (message) => {
@@ -67,7 +62,8 @@ const BubbaExpressApp = () => {
 
   return (
     <div className="relative font-sans">
-      {/* Notificación global */}
+      
+      {/* GLOBAL NOTIFICATION */}
       <AnimatePresence>
         {notification && (
           <motion.div
@@ -78,17 +74,23 @@ const BubbaExpressApp = () => {
             transition={{ duration: 0.3 }}
             className="fixed top-6 right-6 bg-emerald-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-3 z-50"
           >
-            <CheckCircle2 size={20} className="text-white" />
+            <CheckCircle2 size={20} />
             <span className="font-medium">{notification}</span>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* ROUTER INTERNO */}
       <AnimatePresence mode="wait">
 
         {/* LOGIN */}
         {currentView === "login" && (
-          <motion.div key="login" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="login"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <LoginScreen
               setCurrentView={setCurrentView}
               showNotificationMessage={showNotificationMessage}
@@ -98,7 +100,12 @@ const BubbaExpressApp = () => {
 
         {/* MENÚ */}
         {currentView === "menu" && (
-          <motion.div key="menu" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="menu"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <MenuScreen
               cart={cart}
               setCart={setCart}
@@ -112,7 +119,12 @@ const BubbaExpressApp = () => {
 
         {/* CARRITO */}
         {currentView === "cart" && (
-          <motion.div key="cart" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="cart"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <CartScreen
               cart={cart}
               setCart={setCart}
@@ -124,9 +136,14 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
-        {/* ORDEN FINAL */}
+        {/* ORDEN */}
         {currentView === "order" && (
-          <motion.div key="order" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="order"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <OrderScreen
               setCurrentView={setCurrentView}
               order={order}
@@ -137,7 +154,12 @@ const BubbaExpressApp = () => {
 
         {/* PERFIL */}
         {currentView === "profile" && (
-          <motion.div key="profile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="profile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <ProfileScreen
               setCurrentView={setCurrentView}
               showNotificationMessage={showNotificationMessage}
@@ -146,16 +168,45 @@ const BubbaExpressApp = () => {
           </motion.div>
         )}
 
-        {/* DETALLES DE ORDEN */}
-        {currentView === "orderDetails" && (
-          <motion.div key="orderDetails" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <OrderDetailsScreen order={selectedOrder} setCurrentView={setCurrentView} />
+        {/* EDITAR PERFIL */}
+        {currentView === "editProfile" && (
+          <motion.div
+            key="editProfile"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <EditProfileScreen
+              setCurrentView={setCurrentView}
+              showNotificationMessage={showNotificationMessage}
+            />
           </motion.div>
         )}
 
-        {/* PANEL ADMIN */}
+        {/* DETALLES DE ORDEN */}
+        {currentView === "orderDetails" && (
+          <motion.div
+            key="orderDetails"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <OrderDetailsScreen
+              order={selectedOrder}
+              setCurrentView={setCurrentView}
+              showNotificationMessage={showNotificationMessage}
+            />
+          </motion.div>
+        )}
+
+        {/* ADMIN */}
         {currentView === "admin" && isAdmin && (
-          <motion.div key="admin" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div
+            key="admin"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
             <AdminPanel
               setCurrentView={setCurrentView}
               showNotificationMessage={showNotificationMessage}
