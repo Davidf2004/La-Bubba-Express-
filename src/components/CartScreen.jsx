@@ -1,3 +1,4 @@
+// src/components/CartScreen.jsx
 import React from "react";
 import {
   ChevronRight,
@@ -22,26 +23,32 @@ const CartScreen = ({
 }) => {
   const { user } = useAuth();
 
-  const updateQuantity = (id, delta) => {
+  const updateQuantity = (id, delta, configKey) => {
     setCart(
       cart.map((item) =>
-        item.id === id
+        item.id === id && item.configKey === configKey
           ? { ...item, quantity: Math.max(1, item.quantity + delta) }
           : item
       )
     );
   };
 
-  const removeFromCart = (id) => {
-    const item = cart.find((c) => c.id === id);
-    setCart(cart.filter((c) => c.id !== id));
+  const removeFromCart = (id, configKey) => {
+    const item = cart.find(
+      (c) => c.id === id && c.configKey === configKey
+    );
+    setCart(
+      cart.filter(
+        (c) => !(c.id === id && c.configKey === configKey)
+      )
+    );
     showNotificationMessage(`${item.name} eliminado del carrito`);
   };
 
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
+  const subtotal = cart.reduce((sum, item) => {
+    const price = item.unitPrice ?? item.price;
+    return sum + price * item.quantity;
+  }, 0);
 
   const tax = Math.round(subtotal * 0.16);
   const total = subtotal + tax;
@@ -66,15 +73,33 @@ const CartScreen = ({
           id: item.id,
           name: item.name,
           quantity: item.quantity,
-          price: item.price,
+
+          // precios correctos
+          price: item.basePrice ?? item.price,
+          unitPrice: item.unitPrice ?? item.price,
+          extrasTotal: item.extrasTotal ?? 0,
+
+          // personalización
+          milk: item.milk || null,
+          toppings: item.toppings || [],
+          comment: item.comment || "",
+
+          // clave para distinguir configs
+          configKey: item.configKey || null,
+
+          // básicos
           image: item.image,
+          category: item.category || "Bebida",
         })),
+
         subtotal,
         tax,
         total,
         status: "confirmado",
+
         pickupLocation:
           "Universidad De La Salle Bajío - Cafetería El Rincon de la Bubba (Frente a Santander)",
+
         createdAt: serverTimestamp(),
       };
 
@@ -136,6 +161,7 @@ const CartScreen = ({
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            {/* LISTA */}
             <div className="lg:col-span-2">
               <div className="bg-white rounded-3xl shadow-lg p-8 mb-6">
                 <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -143,67 +169,115 @@ const CartScreen = ({
                 </h2>
 
                 <div className="space-y-6">
-                  {cart.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex gap-5 pb-6 border-b last:border-b-0"
-                    >
-                      <div className="w-28 h-28 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-6xl">{item.image}</span>
-                      </div>
+                  {cart.map((item) => {
+                    const unitPrice = item.unitPrice ?? item.price;
 
-                      <div className="flex-1">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <h3 className="font-bold text-lg text-gray-900">
-                              {item.name}
-                            </h3>
-                            <p className="text-sm text-gray-600">
-                              ${item.price} c/u
-                            </p>
-                          </div>
-
-                          <button
-                            onClick={() => removeFromCart(item.id)}
-                            className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition"
-                          >
-                            <Trash2 size={20} />
-                          </button>
+                    return (
+                      <div
+                        key={item.id + item.configKey}
+                        className="flex gap-5 pb-6 border-b last:border-b-0"
+                      >
+                        <div className="w-28 h-28 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-2xl flex items-center justify-center flex-shrink-0">
+                          <span className="text-6xl">{item.image}</span>
                         </div>
 
-                        <div className="flex items-center justify-between mt-4">
-                          <div className="flex items-center gap-3 bg-gray-100 rounded-full p-1.5">
-                            <button
-                              onClick={() => updateQuantity(item.id, -1)}
-                              className="bg-white p-2 rounded-full hover:bg-gray-50 shadow-sm transition"
-                            >
-                              <Minus size={18} />
-                            </button>
-
-                            <span className="font-bold text-lg w-10 text-center">
-                              {item.quantity}
-                            </span>
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between mb-2">
+                            <div>
+                              <h3 className="font-bold text-lg text-gray-900">
+                                {item.name}
+                              </h3>
+                              <p className="text-sm text-gray-600">
+                                ${unitPrice} c/u
+                              </p>
+                            </div>
 
                             <button
-                              onClick={() => updateQuantity(item.id, 1)}
-                              className="bg-white p-2 rounded-full hover:bg-gray-50 shadow-sm transition"
+                              onClick={() =>
+                                removeFromCart(item.id, item.configKey)
+                              }
+                              className="text-red-500 hover:text-red-700 p-2 hover:bg-red-50 rounded-lg transition"
                             >
-                              <Plus size={18} />
+                              <Trash2 size={20} />
                             </button>
                           </div>
 
-                          <div className="text-right">
-                            <div className="font-bold text-2xl text-gray-900">
-                              ${item.price * item.quantity}
+                          {/* leche, toppings */}
+                          <div className="text-xs text-gray-700 space-y-1">
+                            {item.milk && (
+                              <p>
+                                🥛 Leche:{" "}
+                                <span className="font-semibold">
+                                  {item.milk.label || item.milk.name}
+                                </span>
+                              </p>
+                            )}
+
+                            {item.toppings?.length > 0 && (
+                              <p>
+                                🍫 Toppings:{" "}
+                                <span className="font-semibold">
+                                  {item.toppings
+                                    .map((t) => t.label || t.name)
+                                    .join(", ")}
+                                </span>
+                              </p>
+                            )}
+
+                            {item.comment && (
+                              <p className="text-gray-600 italic">
+                                📝 {item.comment}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between mt-4">
+                            <div className="flex items-center gap-3 bg-gray-100 rounded-full p-1.5">
+                              <button
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.id,
+                                    -1,
+                                    item.configKey
+                                  )
+                                }
+                                className="bg-white p-2 rounded-full hover:bg-gray-50 shadow-sm transition"
+                              >
+                                <Minus size={18} />
+                              </button>
+
+                              <span className="font-bold text-lg w-10 text-center">
+                                {item.quantity}
+                              </span>
+
+                              <button
+                                onClick={() =>
+                                  updateQuantity(
+                                    item.id,
+                                    1,
+                                    item.configKey
+                                  )
+                                }
+                                className="bg-white p-2 rounded-full hover:bg-gray-50 shadow-sm transition"
+                              >
+                                <Plus size={18} />
+                              </button>
+                            </div>
+
+                            <div className="text-right">
+                              <div className="text-2xl font-bold text-gray-900">
+                                ${unitPrice * item.quantity}
+                              </div>
                             </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 
+              {/* LOCAL */}
               <div className="bg-gradient-to-br from-emerald-50 to-teal-50 rounded-3xl p-6 border-2 border-emerald-200">
                 <div className="flex items-start gap-4">
                   <div className="bg-emerald-700 p-4 rounded-2xl">
@@ -219,7 +293,8 @@ const CartScreen = ({
                       Universidad De La Salle Bajío
                     </p>
                     <p className="text-sm text-gray-600 mb-3">
-                      Campus Campestre • Cafetería El rincon de la bubba (Frente a Santander)
+                      Campus Campestre • El Rincon de la Bubba (Frente a
+                      Santander)
                     </p>
 
                     <div className="flex items-center gap-2 text-emerald-700">

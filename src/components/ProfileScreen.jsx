@@ -10,7 +10,6 @@ import {
   Heart,
   CreditCard,
   Clock,
-  User,
   Pencil,
 } from "lucide-react";
 import { db } from "../firebaseConfig";

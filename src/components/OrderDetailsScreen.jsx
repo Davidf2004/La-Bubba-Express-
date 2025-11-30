@@ -11,11 +11,16 @@ import {
   AlertTriangle,
   XCircle,
   PackageCheck,
+  Info,
 } from "lucide-react";
 import { db } from "../firebaseConfig";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
 
-const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) => {
+const OrderDetailsScreen = ({
+  order,
+  setCurrentView,
+  showNotificationMessage,
+}) => {
   const [orderData, setOrderData] = useState(order || null);
   const [isCancelling, setIsCancelling] = useState(false);
 
@@ -57,6 +62,7 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
     { key: "entregado", label: "Entregado", icon: PackageCheck },
   ];
 
+  // Solo cancelar cuando está recién recibido/confirmado
   const canCancel =
     orderData &&
     orderData.status &&
@@ -64,7 +70,9 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
 
   const handleCancelOrder = async () => {
     if (!orderData?.id) return;
-    const confirm = window.confirm("¿Seguro que deseas cancelar este pedido?");
+    const confirm = window.confirm(
+      "¿Seguro que deseas cancelar este pedido? Esta acción no se puede deshacer."
+    );
     if (!confirm) return;
 
     try {
@@ -93,16 +101,24 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
             >
               <ChevronRight size={24} className="rotate-180 text-gray-700" />
             </button>
-            <h1 className="text-2xl font-bold">Detalles del Pedido</h1>
+            <h1 className="text-2xl font-bold text-gray-900">
+              Detalles del Pedido
+            </h1>
           </div>
         </div>
 
         <div className="max-w-6xl mx-auto px-6 py-10">
           <div className="bg-white rounded-3xl shadow-lg p-16 text-center">
-            <h2 className="text-2xl font-bold mb-2">No se encontró el pedido</h2>
+            <div className="text-7xl mb-4">🧋</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              No se encontró el pedido
+            </h2>
+            <p className="text-gray-600 mb-6">
+              Regresa a tu perfil y selecciona un pedido válido.
+            </p>
             <button
               onClick={() => setCurrentView("profile")}
-              className="bg-emerald-700 text-white px-10 py-3 rounded-full font-bold hover:bg-emerald-800 shadow"
+              className="bg-emerald-700 text-white px-10 py-3 rounded-full font-bold hover:bg-emerald-800 transition shadow-md"
             >
               Volver al perfil
             </button>
@@ -125,17 +141,17 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
           >
             <ChevronRight size={24} className="rotate-180 text-gray-700" />
           </button>
-          <h1 className="text-2xl font-bold">Detalles del Pedido</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Detalles del Pedido
+          </h1>
         </div>
       </div>
 
       {/* CUERPO */}
       <div className="max-w-6xl mx-auto px-6 py-8 space-y-8">
-
         {/* INFO PRINCIPAL */}
         <div className="bg-white rounded-3xl shadow p-8 space-y-6">
           <div className="flex flex-col md:flex-row md:justify-between gap-4">
-
             <div>
               <h2 className="text-3xl font-bold text-gray-900 mb-2">
                 Pedido #{orderData.id.slice(-5).toUpperCase()}
@@ -145,7 +161,12 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
                 <p>
                   <Clock size={16} className="inline mr-2" />
                   {orderData.createdAt?.toDate
-                    ? orderData.createdAt.toDate().toLocaleString("es-MX")
+                    ? orderData.createdAt
+                        .toDate()
+                        .toLocaleString("es-MX", {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
                     : "Fecha no disponible"}
                 </p>
 
@@ -174,7 +195,7 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
                       : "bg-amber-100 text-amber-700"
                   }`}
                 >
-                  {orderData.status}
+                  {orderData.status || "confirmado"}
                 </span>
               </div>
 
@@ -194,6 +215,9 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
                 <Gift size={22} />
                 {points}
               </div>
+              <p className="text-xs text-gray-600 mt-2">
+                Basado en el total del pedido.
+              </p>
             </div>
           </div>
 
@@ -222,9 +246,11 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
                         <Icon size={20} />
                       </div>
 
-                      <p className={`text-[11px] font-semibold uppercase ${
-                        isActive ? "text-emerald-700" : "text-gray-400"
-                      }`}>
+                      <p
+                        className={`text-[11px] font-semibold uppercase ${
+                          isActive ? "text-emerald-700" : "text-gray-400"
+                        }`}
+                      >
                         {step.label}
                       </p>
                     </div>
@@ -232,7 +258,9 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
                     {!isLast && (
                       <div
                         className={`flex-1 h-1 mx-2 rounded-full transition ${
-                          isCompletedConnector ? "bg-emerald-600" : "bg-gray-200"
+                          isCompletedConnector
+                            ? "bg-emerald-600"
+                            : "bg-gray-200"
                         }`}
                       />
                     )}
@@ -247,7 +275,9 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
             <div className="mt-5 border-t pt-4 flex justify-between items-center text-sm">
               <div className="flex items-center gap-2 text-gray-600">
                 <AlertTriangle size={16} className="text-amber-500" />
-                <span>Puedes cancelar mientras esté en Estado (Recibido).</span>
+                <span>
+                  Puedes cancelar mientras esté en estado <b>Recibido</b>.
+                </span>
               </div>
 
               <button
@@ -264,60 +294,108 @@ const OrderDetailsScreen = ({ order, setCurrentView, showNotificationMessage }) 
 
         {/* PRODUCTOS */}
         <div className="bg-white rounded-3xl shadow p-8">
-          <h3 className="text-2xl font-bold mb-6">Productos del Pedido</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-6">
+            Productos del Pedido
+          </h3>
 
           <div className="space-y-6">
-            {orderData.items?.map((item, idx) => (
-              <div
-                key={`${item.id}-${idx}`}
-                className="flex justify-between items-center border-b pb-4"
-              >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-emerald-50 rounded-xl text-3xl flex items-center justify-center">
-                    {item.image || "🧋"}
-                  </div>
+            {orderData.items?.map((item, idx) => {
+              const isFood = ["Comida", "Tortas", "Baguettes"].includes(
+                item.category || ""
+              );
 
-                  <div>
-                    <div className="text-lg font-semibold">{item.name}</div>
-                    <div className="text-sm text-gray-600">
-                      {item.quantity} × ${item.price}
+              const unitPrice = item.unitPrice ?? item.price;
+
+              return (
+                <div
+                  key={`${item.id}-${idx}`}
+                  className="flex justify-between items-start border-b pb-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-3xl">
+                      {item.image || "🧋"}
+                    </div>
+
+                    <div>
+                      <div className="text-lg font-semibold text-gray-900">
+                        {item.name}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        {item.quantity} × ${unitPrice}
+                      </div>
+
+                      {/* BEBIDAS: leche y toppings */}
+                      {!isFood && (
+                        <div className="mt-2 text-sm text-gray-700 space-y-1">
+                          {item.milk && (
+                            <p>
+                              🥛 Leche:{" "}
+                              <strong>
+                                {item.milk.label || item.milk.name}
+                              </strong>
+                            </p>
+                          )}
+
+                          {item.toppings?.length > 0 && (
+                            <p>
+                              🍫 Toppings:{" "}
+                              <strong>
+                                {item.toppings
+                                  .map((t) => t.label || t.name)
+                                  .join(", ")}
+                              </strong>
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Comentario para comida o bebida */}
+                      {item.comment && (
+                        <p className="mt-3 text-sm text-gray-700 bg-gray-100 px-3 py-2 rounded-xl">
+                          <Info
+                            size={14}
+                            className="inline-block mr-1 text-gray-500"
+                          />
+                          {item.comment}
+                        </p>
+                      )}
                     </div>
                   </div>
-                </div>
 
-                <div className="text-xl font-bold text-gray-900">
-                  ${item.quantity * item.price}
+                  <div className="text-xl font-bold text-gray-900">
+                    ${unitPrice * item.quantity}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
         {/* RESUMEN */}
         <div className="bg-white rounded-3xl shadow p-8">
-          <h3 className="text-xl font-bold mb-6">Resumen</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-6">Resumen</h3>
 
-          <div className="space-y-3 text-gray-700">
+          <div className="text-gray-700 space-y-3">
             <p className="flex justify-between">
               <span>Subtotal</span>
               <span>${orderData.subtotal}</span>
             </p>
-
             <p className="flex justify-between">
               <span>IVA (16%)</span>
               <span>${orderData.tax}</span>
             </p>
 
-            <p className="flex justify-between text-xl font-bold border-t pt-4">
+            <p className="flex justify-between text-xl font-bold text-gray-900 pt-4 border-t">
               <span>Total</span>
               <span>${orderData.total}</span>
             </p>
           </div>
         </div>
 
+        {/* BOTÓN PEDIR DE NUEVO */}
         <button
           onClick={() => setCurrentView("menu")}
-          className="w-full bg-emerald-700 text-white py-5 rounded-full font-bold text-lg hover:bg-emerald-800 shadow"
+          className="w-full bg-emerald-700 text-white py-5 rounded-full text-lg font-bold hover:bg-emerald-800 shadow-lg"
         >
           Pedir de Nuevo
         </button>

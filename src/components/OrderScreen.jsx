@@ -10,9 +10,12 @@ import {
   MapPin,
   XCircle,
   AlertTriangle,
+  Info,
 } from "lucide-react";
 import { db } from "../firebaseConfig";
 import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+
+const FOOD_CATEGORIES = ["Comida", "Tortas", "Baguettes", "Snacks"];
 
 const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
   const [orderData, setOrderData] = useState(order || null);
@@ -21,21 +24,19 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
   useEffect(() => {
     if (!order?.id) return;
     const ref = doc(db, "orders", order.id);
-    const unsub = onSnapshot(
-      ref,
-      (snap) => {
-        if (snap.exists()) {
-          setOrderData({ id: snap.id, ...snap.data() });
-        }
-      },
-      (err) => {
-        console.error("Error en onSnapshot de OrderScreen:", err);
+
+    const unsub = onSnapshot(ref, (snap) => {
+      if (snap.exists()) {
+        setOrderData({ id: snap.id, ...snap.data() });
       }
-    );
+    });
+
     return () => unsub();
   }, [order]);
 
-  // ⬇⬇⬇ NUEVO: soporte a ENTREGADO (4 pasos)
+  // ======================
+  // PROGRESO DEL PEDIDO
+  // ======================
   const getStatusStep = (status) => {
     switch (status) {
       case "preparando":
@@ -45,7 +46,7 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
       case "entregado":
         return 4;
       default:
-        return 1;
+        return 1; // "confirmado"/"recibido"
     }
   };
 
@@ -54,7 +55,6 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
     [orderData?.status]
   );
 
-  // ⬇⬇⬇ NUEVO: se agrega ENTREGADO al final
   const steps = [
     { key: "recibido", label: "Recibido", icon: CheckCircle },
     { key: "preparando", label: "Preparando", icon: Clock },
@@ -62,19 +62,15 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
     { key: "entregado", label: "Entregado", icon: PackageCheck },
   ];
 
-  const canCancel =
-    orderData &&
-    orderData.status &&
-    orderData.status !== "cancelado" &&
-    orderData.status !== "listo" &&
-    orderData.status !== "entregado" &&
-    orderData.status === "confirmado";
+  // ======================
+  // CANCELACIÓN
+  // ======================
+  const canCancel = orderData?.status === "confirmado";
 
   const handleCancelOrder = async () => {
     if (!orderData?.id) return;
-    const confirm = window.confirm(
-      "¿Seguro que deseas cancelar este pedido? Esta acción no se puede deshacer."
-    );
+
+    const confirm = window.confirm("¿Seguro que deseas cancelar este pedido?");
     if (!confirm) return;
 
     try {
@@ -83,51 +79,47 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
         status: "cancelado",
       });
       showNotificationMessage("Pedido cancelado correctamente.");
-    } catch (error) {
-      console.error("Error al cancelar pedido:", error);
+    } catch (e) {
+      console.error(e);
       showNotificationMessage("Error al cancelar el pedido.");
     } finally {
       setIsCancelling(false);
     }
   };
 
+  // ======================
+  // SIN PEDIDO
+  // ======================
   if (!orderData) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-          <div className="max-w-6xl mx-auto px-6 py-5 flex items-center gap-4">
+          <div className="px-6 py-5 flex items-center gap-4 max-w-6xl mx-auto">
             <button
               onClick={() => setCurrentView("menu")}
-              className="p-2 hover:bg-gray-100 rounded-full transition"
+              className="p-2 hover:bg-gray-100 rounded-full"
             >
               <ChevronRight
                 size={24}
-                className="transform rotate-180 text-gray-700"
+                className="rotate-180 text-gray-700"
               />
             </button>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-900">
-                Seguimiento de Pedido
-              </h1>
-              <p className="text-sm text-gray-600">
-                No hay pedido activo actualmente
-              </p>
-            </div>
+
+            <h1 className="text-2xl font-bold">Seguimiento de Pedido</h1>
           </div>
         </div>
 
-        <div className="max-w-6xl mx-auto px-6 py-10">
-          <div className="bg-white rounded-3xl shadow-lg p-16 text-center">
+        <div className="max-w-6xl mx-auto px-6 py-16">
+          <div className="bg-white shadow-lg rounded-3xl p-16 text-center">
             <div className="text-8xl mb-6">🧋</div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-3">
-              No hay pedido activo
-            </h2>
+            <h2 className="text-3xl font-bold">No hay pedido activo</h2>
             <p className="text-gray-600 mb-8">
-              Realiza un pedido en el menú para verlo aquí.
+              Realiza un pedido para verlo aquí.
             </p>
+
             <button
               onClick={() => setCurrentView("menu")}
-              className="bg-emerald-700 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-emerald-800 transition shadow-lg"
+              className="bg-emerald-700 text-white px-10 py-4 rounded-full font-bold hover:bg-emerald-800"
             >
               Ver Menú
             </button>
@@ -137,122 +129,125 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
     );
   }
 
+  // ======================
+  // CALCULAR PUNTOS
+  // ======================
   const points = Math.floor((orderData.total || 0) / 10);
 
+  // ======================
+  // RENDER PRINCIPAL
+  // ======================
   return (
     <div className="min-h-screen bg-gray-50">
       {/* HEADER */}
-      <div className="bg-white border-b sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-5 flex items-center gap-4">
+      <div className="bg-white border-b sticky top-0 z-20 shadow-sm">
+        <div className="px-6 py-5 flex items-center gap-4 max-w-6xl mx-auto">
           <button
             onClick={() => setCurrentView("menu")}
-            className="p-2 hover:bg-gray-100 rounded-full transition"
+            className="p-2 hover:bg-gray-100 rounded-full"
           >
             <ChevronRight
               size={24}
-              className="transform rotate-180 text-gray-700"
+              className="rotate-180 text-gray-700"
             />
           </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Seguimiento de Pedido
-            </h1>
-            <p className="text-sm text-gray-600">
-              Monitorea el estado de tu orden en tiempo real
-            </p>
-          </div>
+
+          <h1 className="text-2xl font-bold text-gray-900">
+            Seguimiento de Pedido
+          </h1>
         </div>
       </div>
 
-      {/* CONTENIDO */}
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
-        {/* RESUMEN PRINCIPAL */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 flex flex-col md:flex-row md:items-start md:justify-between gap-6">
+      <div className="max-w-6xl mx-auto px-6 py-10 space-y-10">
+
+        {/* ====================== */}
+        {/* RESUMEN DE LA ORDEN */}
+        {/* ====================== */}
+        <div className="bg-white rounded-3xl shadow p-8 flex flex-col md:flex-row md:justify-between gap-6">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            <h2 className="text-3xl font-bold mb-2">
               Orden #{orderData.id.slice(-6).toUpperCase()}
             </h2>
+
             <p className="text-gray-600 mb-1">
               Total:{" "}
-              <span className="font-semibold text-emerald-700">
+              <span className="font-bold text-emerald-700">
                 ${orderData.total}
               </span>
             </p>
+
             <p className="text-sm text-gray-500">
-              Estado actual:{" "}
+              Estado:{" "}
               <span className="font-semibold capitalize">
-                {orderData.status || "confirmado"}
+                {orderData.status}
               </span>
             </p>
 
-            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-50 border border-emerald-200 text-sm text-emerald-800">
-              <MapPin size={16} />
-              <span>{orderData.pickupLocation}</span>
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-full">
+              <MapPin size={18} />
+              {orderData.pickupLocation}
             </div>
 
             {orderData.status === "cancelado" && (
-              <div className="mt-4 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-2xl px-4 py-2 text-sm">
-                <AlertTriangle size={16} />
-                <span>Este pedido fue cancelado.</span>
+              <div className="mt-4 px-4 py-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl">
+                <AlertTriangle size={18} />
+                Pedido cancelado.
               </div>
             )}
           </div>
 
-          <div className="bg-emerald-50 rounded-2xl px-5 py-4 border border-emerald-200 text-center min-w-[220px]">
-            <p className="text-sm font-semibold text-emerald-800 mb-1">
-              Puntos ganados
-            </p>
-            <div className="text-3xl font-bold text-amber-600 flex items-center justify-center gap-2">
-              <Gift size={22} />
-              {points}
+          <div className="bg-amber-50 px-6 py-4 rounded-2xl border border-amber-200 text-center min-w-[240px]">
+            <p className="text-sm font-semibold text-amber-800">Puntos ganados</p>
+
+            <div className="text-4xl font-bold text-amber-600 flex justify-center gap-2">
+              <Gift size={26} /> {points}
             </div>
-            <p className="text-xs text-gray-600 mt-2">
-              Se acumulan en tu perfil al completar el pedido.
+
+            <p className="text-xs text-gray-500 mt-2">
+              Se sumarán a tu perfil al finalizar el pedido.
             </p>
           </div>
         </div>
 
-        {/* PROGRESO + CANCELAR */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 space-y-6">
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
-            Progreso del Pedido
-          </h3>
+        {/* ====================== */}
+        {/* PROGRESO */}
+        {/* ====================== */}
+        <div className="bg-white rounded-3xl shadow p-8 space-y-6">
+          <h3 className="text-xl font-bold text-gray-900">Progreso del Pedido</h3>
 
-          {/* Barra con estado ENTREGADO */}
           <div className="flex items-center justify-between">
             {steps.map((step, index) => {
               const Icon = step.icon;
               const isActive = index + 1 <= currentStep;
+              const doneConnector = index + 1 < currentStep;
               const isLast = index === steps.length - 1;
-              const isCompletedConnector = index + 1 < currentStep;
 
               return (
                 <div key={step.key} className="flex items-center flex-1">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`w-14 h-14 flex items-center justify-center rounded-full border-4 mb-2 transition-all duration-300 ${
+                      className={`w-14 h-14 flex items-center justify-center rounded-full border-4 shadow transition-all ${
                         isActive
-                          ? "border-emerald-600 bg-emerald-600 text-white shadow-md"
-                          : "border-gray-300 bg-gray-100 text-gray-400"
+                          ? "bg-emerald-600 border-emerald-600 text-white"
+                          : "bg-gray-100 border-gray-300 text-gray-400"
                       }`}
                     >
                       <Icon size={24} />
                     </div>
-                    <p
-                      className={`text-xs font-semibold uppercase tracking-wide ${
+
+                    <span
+                      className={`text-xs font-semibold mt-1 ${
                         isActive ? "text-emerald-700" : "text-gray-400"
                       }`}
                     >
                       {step.label}
-                    </p>
+                    </span>
                   </div>
 
                   {!isLast && (
                     <div
-                      className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${
-                        isCompletedConnector
-                          ? "bg-emerald-600"
-                          : "bg-gray-200"
+                      className={`flex-1 h-1 mx-2 rounded-full transition-all ${
+                        doneConnector ? "bg-emerald-600" : "bg-gray-200"
                       }`}
                     />
                   )}
@@ -261,23 +256,17 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
             })}
           </div>
 
-          <p className="text-sm text-gray-600 mt-2">
-            Te avisaremos cuando tu pedido esté listo para recoger en la
-            cafetería.
-          </p>
-
           {canCancel && (
-            <div className="mt-6 border-t pt-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <AlertTriangle size={16} className="text-amber-500" />
-                <span>
-                  Puedes cancelar tu pedido mientras aún no está en preparación.
-                </span>
+            <div className="mt-6 border-t pt-4 flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+              <div className="flex items-center gap-2 text-gray-600 text-sm">
+                <AlertTriangle size={16} className="text-amber-600" />
+                Puedes cancelar mientras esté en estado “Recibido”.
               </div>
+
               <button
                 onClick={handleCancelOrder}
                 disabled={isCancelling}
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-60"
+                className="bg-red-100 text-red-700 px-6 py-2.5 rounded-full font-semibold hover:bg-red-200 disabled:opacity-50 flex items-center gap-2"
               >
                 <XCircle size={18} />
                 {isCancelling ? "Cancelando..." : "Cancelar pedido"}
@@ -286,75 +275,111 @@ const OrderScreen = ({ setCurrentView, order, showNotificationMessage }) => {
           )}
         </div>
 
+        {/* ====================== */}
         {/* DETALLES DEL PEDIDO */}
-        <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-200 space-y-8">
-          <div className="flex items-center justify-between">
-            <h3 className="text-2xl font-bold text-gray-900">
-              Detalles del Pedido
-            </h3>
-            {orderData.createdAt?.toDate && (
-              <p className="text-xs text-gray-500">
-                Realizado el{" "}
-                {orderData.createdAt
-                  .toDate()
-                  .toLocaleString("es-MX", {
-                    dateStyle: "short",
-                    timeStyle: "short",
-                  })}
-              </p>
-            )}
-          </div>
+        {/* ====================== */}
+        <div className="bg-white rounded-3xl shadow p-8 space-y-8 border">
+          <h3 className="text-2xl font-bold text-gray-900">
+            Detalles del Pedido
+          </h3>
 
-          <div className="space-y-6">
-            {orderData.items?.map((item, index) => (
+          {/* PRODUCTOS */}
+          {orderData.items.map((item, idx) => {
+            const isFood = FOOD_CATEGORIES.includes(item.category || "");
+            const unitPrice = item.unitPrice ?? item.price;
+
+            return (
               <div
-                key={`${item.id}-${index}`}
-                className="flex items-center justify-between border-b pb-4"
+                key={`${item.id}-${idx}`}
+                className="flex items-start justify-between border-b pb-5"
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center text-4xl">
+                <div className="flex gap-4">
+                  <div className="w-16 h-16 bg-emerald-50 rounded-xl flex items-center justify-center text-4xl">
                     {item.image || "🧋"}
                   </div>
+
                   <div>
-                    <h4 className="font-bold text-gray-900">{item.name}</h4>
-                    <p className="text-sm text-gray-500">
-                      {item.quantity} × ${item.price}
+                    <div className="text-lg font-bold text-gray-900">
+                      {item.name}
+                    </div>
+
+                    <p className="text-gray-600 text-sm mb-1">
+                      {item.quantity} × ${unitPrice}
                     </p>
+
+                    {/* BEBIDAS */}
+                    {!isFood && (
+                      <div className="text-sm text-gray-700 space-y-1">
+                        {item.milk && (
+                          <div>
+                            🥛 Leche:{" "}
+                            <span className="font-semibold">
+                              {item.milk.label}
+                            </span>
+                          </div>
+                        )}
+
+                        {item.toppings?.length > 0 && (
+                          <div>
+                            🍫 Toppings:{" "}
+                            <span className="font-semibold">
+                              {item.toppings.map((t) => t.label).join(", ")}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 👇 Comentarios siempre visibles */}
+                    {item.comment && (
+                      <p className="mt-2 text-sm bg-gray-100 px-3 py-1.5 rounded-xl text-gray-700">
+                        <Info
+                          size={14}
+                          className="inline-block mr-1 text-gray-500"
+                        />
+                        {item.comment}
+                      </p>
+                    )}
                   </div>
                 </div>
-                <div className="font-semibold text-gray-900">
-                  ${item.price * item.quantity}
+
+                <div className="font-bold text-xl text-gray-900">
+                  ${(unitPrice * item.quantity).toFixed(2)}
                 </div>
               </div>
-            ))}
-          </div>
+            );
+          })}
 
-          <div className="mt-4 pt-6 border-t-2 border-dashed border-gray-200 space-y-2">
+          {/* RESUMEN DE COSTOS */}
+          <div className="border-t pt-6 space-y-2">
             <div className="flex justify-between text-gray-600">
               <span>Subtotal</span>
               <span>${orderData.subtotal}</span>
             </div>
+
             <div className="flex justify-between text-gray-600">
               <span>IVA (16%)</span>
               <span>${orderData.tax}</span>
             </div>
-            <div className="flex justify-between items-center mt-4">
-              <span className="font-bold text-xl text-gray-900">Total</span>
-              <span className="text-3xl font-bold text-emerald-700">
+
+            <div className="flex justify-between text-xl font-bold pt-4">
+              <span>Total</span>
+              <span className="text-emerald-700">
                 ${orderData.total}
               </span>
             </div>
-          </div>
 
-          <div className="mt-6 text-center text-sm text-gray-600">
-            <Clock size={18} className="inline-block mr-2 text-emerald-600" />
-            Tiempo estimado: 15–20 minutos
-          </div>
+            <p className="text-center mt-4 text-sm text-gray-600">
+              <Clock
+                size={16}
+                className="inline text-emerald-600 mr-1"
+              />
+              Tiempo estimado: 15–20 minutos
+            </p>
 
-          <div className="mt-8 flex justify-center">
             <button
               onClick={() => setCurrentView("menu")}
-              className="bg-emerald-700 text-white px-10 py-4 rounded-full font-bold text-lg hover:bg-emerald-800 transition shadow-xl"
+              className="w-full bg-emerald-700 text-white py-4 mt-6 rounded-full font-bold hover:bg-emerald-800"
             >
               Realizar otro pedido
             </button>
